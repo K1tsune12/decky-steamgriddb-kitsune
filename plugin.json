@@ -1,11 +1,11 @@
 {
   "api_version": 1,
   "name": "SteamGridDB",
-  "author": "SteamGridDB",
+  "author": "SteamGridDB, K1tsune12",
   "flags": ["debug"],
   "publish": {
     "tags": ["artwork", "sgdb"],
     "description": "Customize your library with user-submitted images or local files, and other style tweaks like square capsules, uniform sizing, and more!",
-    "image": "https://raw.githubusercontent.com/SteamGridDB/decky-steamgriddb/main/thumb.png"
+    "image": "https://raw.githubusercontent.com/K1tsune12/decky-steamgriddb-kitsune/main/thumb.png"
   }
 }

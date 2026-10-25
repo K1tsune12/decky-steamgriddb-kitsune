@@ -70,5 +70,10 @@
   "MSG_GAME_SELECTED_AND_ASSETS_FILTERED": "Selecionou {gameName} com filtros",
   "MSG_ASSET_APPLY_SUCCESS": "Imagem aplicada com sucesso!",
   "MSG_ASSET_APPLY_ERROR": "Houve um problema ao aplicar este recurso.",
-  "ACTION_OPEN_DETAILS": "Detalhes"
+  "ACTION_OPEN_DETAILS": "Detalhes",
+  "ACTION_APPLY_ALL_OFFICIAL": "Aplicar todas as oficiais",
+  "TITLE_APPLY_ALL_OFFICIAL": "Aplicar todas as artes oficiais?",
+  "MSG_APPLY_ALL_OFFICIAL_DESC": "Isto substitui {assetTypes} deste jogo pelas artes oficiais da Steam.",
+  "MSG_APPLY_ALL_OFFICIAL_SUCCESS": "As artes oficiais foram aplicadas com sucesso!",
+  "ACTION_ASSET_APPLY_AS": "Usar como {assetType}"
 }

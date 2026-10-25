@@ -28,6 +28,8 @@ export const SGDB_API_KEY = '6465636b796c6f616465723432303639';
 
 export const SGDB_API_BASE = process.env.ROLLUP_ENV === 'development' ? 'http://sgdb.test/api/v2' : 'https://www.steamgriddb.com/api/v2';
 
+const API_TIMEOUT_MS = 20000;
+
 export type SGDBContextType = {
   appId: number | null;
   setAppId: React.Dispatch<React.SetStateAction<number | null>>;
@@ -107,16 +109,11 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
     assetType = getAmbiguousAssetType(assetType);
     if (assetType === ASSET_TYPE.icon) {
       if (appOverview?.BIsShortcut()) {
-        const res = await call<[
-          appid: number | null,
-          owner_id: string,
-          path: string | null,
-        ], string>('set_shortcut_icon',
-          appId,
-          getCurrentSteamUserId(),
-          null // null removes the icon
-        );
-        if (res !== 'icon_is_same_path') showRestartConfirm();
+        // An empty path removes the icon from the shortcut, but Steam keeps showing
+        // the old one from memory until it restarts
+        const hadIcon = !!appOverview.icon_data;
+        SteamClient.Apps.SetShortcutIcon(appId, '');
+        if (hadIcon) showRestartConfirm();
       } else {
         if (appOverview?.icon_hash) {
           // Redownload the icon from Steam
@@ -165,6 +162,11 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
         reject(new DOMException('Aborted', 'AbortError'));
       };
 
+      // A stalled connection would otherwise leave the UI loading forever
+      const timeout = window.setTimeout(() => {
+        reject(new Error('SGDB API request timed out, check your connection'));
+      }, API_TIMEOUT_MS);
+
       signal?.addEventListener('abort', abortHandler);
       fetchNoCors(`${SGDB_API_BASE}${url}`, {
         method: 'GET',
@@ -172,25 +174,30 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
           Accept: 'application/json',
           Authorization: `Bearer ${SGDB_API_KEY}`,
         },
-      }).then((res) => {
+      }).then(async (res) => {
         log(res);
         if (res.status !== 200 && res.status >= 500) {
-          return reject(new Error('SGDB API request failed'));
+          throw new Error('SGDB API request failed');
         }
 
+        let assetRes: any;
         try {
-          res.json().then((assetRes) => {
-            if (!assetRes.success) {
-              const apiErr = new Error(assetRes.errors.join(', '));
-              (apiErr as any).status = res.status;
-              return reject(apiErr);
-            }
-            return resolve(assetRes.data);
-          });
-        } catch (err: any) {
-          return reject(new Error(err.message));
+          assetRes = await res.json();
+        } catch {
+          // Usually a captive portal, a proxy or an ISP block page instead of the API
+          throw new Error(`SGDB API request failed (unexpected response, HTTP ${res.status})`);
         }
+
+        if (!assetRes?.success) {
+          const apiErr = new Error(assetRes?.errors?.join(', ') || `SGDB API request failed (HTTP ${res.status})`);
+          (apiErr as any).status = res.status;
+          throw apiErr;
+        }
+        resolve(assetRes.data);
+      }).catch((err: any) => {
+        reject(err instanceof Error ? err : new Error(String(err)));
       }).finally(() => {
+        window.clearTimeout(timeout);
         signal?.removeEventListener('abort', abortHandler);
       });
     });
@@ -209,24 +216,22 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
     assetType = getAmbiguousAssetType(assetType);
     if (assetType === ASSET_TYPE.icon) {
       if (appOverview?.BIsShortcut()) {
-        const res = await call<[
+        // Save the icon to the grid folder, then let Steam update the shortcut itself.
+        // Writing shortcuts.vdf directly gets overwritten by the running client and needs a restart.
+        const savedPath = await call<[
           appid: number | null,
           owner_id: string,
-          path: string | null,
-        ], string | boolean>(path ? 'set_shortcut_icon_from_path' : 'set_shortcut_icon_from_url',
+          location: string,
+        ], string>(path ? 'save_shortcut_icon_from_path' : 'save_shortcut_icon_from_url',
           appId,
           getCurrentSteamUserId(),
           url
         );
+        log('save_shortcut_icon result', savedPath);
 
-        log('set_shortcut_icon result', res);
-        if (res === 'icon_is_same_path') {
-          // If the path is already the same as the current icon, we can force an icon re-read by setting the name to itself
-          SteamClient.Apps.SetShortcutName(appOverview.appid, appOverview.display_name);
-        } else if (res === true) {
-          // shortcuts.vdf was modified, can't figure out how to make Steam re-read it so just ask user to reboot
-          showRestartConfirm();
-        }
+        // Steam ignores a path it already has, so reset it first to force the new file to be read
+        SteamClient.Apps.SetShortcutIcon(appId, '');
+        SteamClient.Apps.SetShortcutIcon(appId, savedPath);
       } else {
         // Change default Steam icon by poisoning the cache like Boop does it
         if (!appOverview?.icon_hash) {

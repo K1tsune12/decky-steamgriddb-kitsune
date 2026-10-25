@@ -1,8 +1,6 @@
-import sys
+import os
 from platform import system
-from os.path import dirname
-from os import W_OK, access, stat
-from stat import FILE_ATTRIBUTE_HIDDEN
+from os import W_OK, access
 from urllib.request import Request, urlopen
 from urllib.parse import urlparse
 from base64 import b64encode
@@ -17,17 +15,38 @@ WINDOWS = system() == "Windows"
 if WINDOWS:
     from winreg import QueryValueEx, OpenKey, HKEY_CURRENT_USER
 
-    # workaound for py_modules not being added to path on windoge
-    sys.path.append(decky.DECKY_PLUGIN_DIR)
-    from py_modules.vdf import binary_dump, binary_load
-else:
-    from vdf import binary_dump, binary_load
+# Seconds before a stalled download is abandoned instead of hanging the UI
+DOWNLOAD_TIMEOUT = 30
+
+_steam_path = None
 
 def get_steam_path():
+    global _steam_path
+    if _steam_path is not None:
+        return _steam_path
+
     if WINDOWS:
-        return Path(QueryValueEx(OpenKey(HKEY_CURRENT_USER, r"Software\Valve\Steam"), "SteamPath")[0])
+        _steam_path = Path(QueryValueEx(OpenKey(HKEY_CURRENT_USER, r"Software\Valve\Steam"), "SteamPath")[0])
+        return _steam_path
+
+    home = Path(decky.DECKY_USER_HOME)
+    candidates = [
+        os.environ.get("STEAM_PATH"),
+        home / '.local' / 'share' / 'Steam',
+        home / '.steam' / 'steam',
+        home / '.steam' / 'root',
+        home / '.var' / 'app' / 'com.valvesoftware.Steam' / '.local' / 'share' / 'Steam',
+        home / 'snap' / 'steam' / 'common' / '.local' / 'share' / 'Steam',
+    ]
+    for candidate in candidates:
+        if candidate and (Path(candidate) / 'userdata').is_dir():
+            _steam_path = Path(candidate).resolve()
+            break
     else:
-        return Path(decky.DECKY_USER_HOME) / '.local' / 'share' / 'Steam'
+        _steam_path = home / '.local' / 'share' / 'Steam'
+
+    decky.logger.info("Using Steam path %s" % _steam_path)
+    return _steam_path
 
 def get_steam_userdata():
     return get_steam_path() / 'userdata'
@@ -44,6 +63,23 @@ def get_steam_icon_name(icon_hash):
 def get_userdata_config(steam32):
     return get_steam_userdata() / steam32 / 'config'
 
+def ensure_writable_dir(directory):
+    directory = Path(directory)
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        raise Exception("Can't create %s, check the folder permissions" % directory)
+    if not access(directory, W_OK):
+        raise Exception("%s is read-only, check the folder permissions" % directory)
+    return directory
+
+def fetch_url(url):
+    req = Request(url, headers={'User-Agent': 'decky-steamgriddb backend'})
+    with urlopen(req, context=get_ssl_context(), timeout=DOWNLOAD_TIMEOUT) as res:
+        if res.status != 200:
+            raise Exception("Download failed with HTTP %s" % res.status)
+        return res.read()
+
 class Plugin:
     async def _main(self):
         self.settings = SettingsManager(name="steamgriddb", settings_directory=decky.DECKY_PLUGIN_SETTINGS_DIR)
@@ -52,9 +88,7 @@ class Plugin:
         pass
 
     async def download_as_base64(self, url=''):
-        req = Request(url, headers={'User-Agent': 'decky-steamgriddb backend'})
-        content = urlopen(req, context=get_ssl_context()).read()
-        return b64encode(content).decode('utf-8')
+        return b64encode(fetch_url(url)).decode('utf-8')
 
     async def read_file_as_base64(self, path=''):
         with open(path, 'rb') as image_file:
@@ -65,66 +99,34 @@ class Plugin:
 
     async def download_file(self, url='', output_dir='', file_name=''):
         decky.logger.debug({url, output_dir, file_name})
-        try:
-            if access(dirname(output_dir), W_OK):
-                req = Request(url, headers={'User-Agent': 'decky-steamgriddb backend'})
-                res = urlopen(req, context=get_ssl_context())
-                if res.status == 200:
-                    with open(Path(output_dir) / file_name, mode='wb') as f:
-                        f.write(res.read())
-                    return str(Path(output_dir) / file_name)
-                return False
-        except:
-            return False
+        output_file = ensure_writable_dir(output_dir) / file_name
+        content = fetch_url(url)
+        with open(output_file, mode='wb') as f:
+            f.write(content)
+        return str(output_file)
 
-        return False
-
-    async def set_shortcut_icon_from_path(self, appid, owner_id, path):
+    async def save_shortcut_icon_from_path(self, appid, owner_id, path):
         ext = Path(path).suffix
-        iconname = "%s_icon%s" % (appid, ext)
-        output_file = get_userdata_config(owner_id) / 'grid' / iconname
-        saved_path = str(copyfile(path, output_file))
-        return await self.set_shortcut_icon(appid, owner_id, path=saved_path)
+        output_file = ensure_writable_dir(get_userdata_config(owner_id) / 'grid') / ("%s_icon%s" % (appid, ext))
+        if Path(path).resolve() != output_file.resolve():
+            copyfile(path, output_file)
+        return str(output_file)
 
-    async def set_shortcut_icon_from_url(self, appid, owner_id, url):
-        output_dir = get_userdata_config(owner_id) / 'grid'
+    async def save_shortcut_icon_from_url(self, appid, owner_id, url):
         ext = Path(urlparse(url).path).suffix
-        iconname = "%s_icon%s" % (appid, ext)
-        saved_path = await self.download_file(url, output_dir, file_name=iconname)
-        if saved_path:
-            return await self.set_shortcut_icon(appid, owner_id, path=saved_path)
-        else:
-            raise Exception("Failed to download icon from %s" % url)
-
-    async def set_shortcut_icon(self, appid, owner_id, path=None):
-        shortcuts_vdf = get_userdata_config(owner_id) / 'shortcuts.vdf'
-
-        d = binary_load(open(shortcuts_vdf, "rb"))
-        for shortcut in d['shortcuts'].values():
-            shortcut_appid = (shortcut['appid'] & 0xffffffff) | 0x80000000
-            if shortcut_appid == appid:
-                if shortcut['icon'] == path:
-                    return 'icon_is_same_path'
-
-                # Clear icon
-                if path is None:
-                    shortcut['icon'] = ''
-                else:
-                    shortcut['icon'] = path
-                binary_dump(d, open(shortcuts_vdf, 'wb'))
-                return True
-        raise Exception('Could not find shortcut to edit')
+        return await self.download_file(url, str(get_userdata_config(owner_id) / 'grid'), file_name="%s_icon%s" % (appid, ext))
 
     async def set_steam_icon_from_url(self, appid, url, icon_hash):
         # Poison the cache through a temp file, Steam restores the original icon
         # if it catches its cache file being written to directly
-        output_dir = get_steam_icon_dir(appid)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = ensure_writable_dir(get_steam_icon_dir(appid))
         icon_name = get_steam_icon_name(icon_hash)
         temp_path = output_dir / ("%s_temp" % icon_name)
-        if not await self.download_file(url, str(output_dir), file_name=temp_path.name):
+        try:
+            await self.download_file(url, str(output_dir), file_name=temp_path.name)
+        except Exception:
             temp_path.unlink(missing_ok=True)
-            raise Exception("Failed to download icon from %s" % url)
+            raise
         output_file = output_dir / icon_name
         temp_path.replace(output_file)
         return str(output_file)
@@ -132,8 +134,7 @@ class Plugin:
     async def set_steam_icon_from_path(self, appid, path, icon_hash):
         # Poison the cache through a temp file, Steam restores the original icon
         # if it catches its cache file being written to directly
-        output_dir = get_steam_icon_dir(appid)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = ensure_writable_dir(get_steam_icon_dir(appid))
         icon_name = get_steam_icon_name(icon_hash)
         temp_path = output_dir / ("%s_temp" % icon_name)
         copyfile(path, temp_path)

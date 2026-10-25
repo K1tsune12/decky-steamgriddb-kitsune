@@ -1,4 +1,4 @@
-import { Focusable, joinClassNames, showModal } from '@decky/ui';
+import { ConfirmModal, Focusable, joinClassNames, showModal } from '@decky/ui';
 import { toaster } from '@decky/api';
 import { useState, FC, useRef, useEffect, useMemo } from 'react';
 
@@ -15,6 +15,7 @@ import ResultsStateBar from '../ResultsStateBar';
 import LogoPositionerModal from '../../modals/LogoPositionerModal';
 import OfficialAssetsModal from '../../modals/OfficialAssetsModal';
 import Motd from '../Motd';
+import getOfficialAssetUrls from '../../utils/officialAssets';
 
 const AssetTab: FC<{ assetType: SGDBAssetType }> = ({ assetType }) => {
   const { get } = useSettings();
@@ -68,14 +69,61 @@ const AssetTab: FC<{ assetType: SGDBAssetType }> = ({ assetType }) => {
     ), window);
   };
 
-  const setAsset = async (assetId: number, url: string) => {
+  const handleApplyAllOfficialClick = () => {
+    const officialUrls = getOfficialAssetUrls(externalSgdbData);
+    const assetTypes = Object.keys(officialUrls) as SGDBAssetType[];
+    if (!assetTypes.length) return;
+
+    showModal((
+      <ConfirmModal
+        strTitle={t('TITLE_APPLY_ALL_OFFICIAL', 'Apply All Official Artwork?')}
+        strDescription={t('MSG_APPLY_ALL_OFFICIAL_DESC', 'This replaces the current {assetTypes} of this game with the official Steam artwork.')
+          .replace('{assetTypes}', assetTypes.map((type) => SGDB_ASSET_TYPE_READABLE[type]).join(', '))}
+        strOKButtonText={t('ACTION_APPLY_ALL_OFFICIAL', 'Apply All Official')}
+        onOK={async () => {
+          const failed: string[] = [];
+          for (const type of assetTypes) {
+            let applied = false;
+            // try the high resolution version first, then fall back to the regular one
+            for (const url of officialUrls[type] ?? []) {
+              try {
+                await changeAssetFromUrl(url, type);
+                applied = true;
+                break;
+              } catch (err) {
+                continue;
+              }
+            }
+            if (!applied) failed.push(SGDB_ASSET_TYPE_READABLE[type]);
+          }
+
+          if (failed.length) {
+            toaster.toast({
+              title: t('MSG_ASSET_APPLY_ERROR', 'There was a problem applying this asset.'),
+              body: failed.join(', '),
+              icon: <MenuIcon fill="#f3171e" />,
+            });
+          } else {
+            toaster.toast({
+              title: appOverview?.display_name,
+              body: t('MSG_APPLY_ALL_OFFICIAL_SUCCESS', 'Official artwork has been successfully applied!'),
+              icon: <MenuIcon />,
+              duration: 1500,
+            });
+          }
+        }}
+      />
+    ), window);
+  };
+
+  const setAsset = async (assetId: number, url: string, targetType: SGDBAssetType = assetType) => {
     if (!downloadingId) {
       try {
         setDownloadingId(assetId);
-        await changeAssetFromUrl(url, assetType);
+        await changeAssetFromUrl(url, targetType);
         toaster.toast({
           title: appOverview?.display_name,
-          body: t('MSG_ASSET_APPLY_SUCCESS', '{assetType} has been successfully applied!').replace('{assetType}', SGDB_ASSET_TYPE_READABLE[assetType]),
+          body: t('MSG_ASSET_APPLY_SUCCESS', '{assetType} has been successfully applied!').replace('{assetType}', SGDB_ASSET_TYPE_READABLE[targetType]),
           icon: <MenuIcon />,
           duration: 1500,
         });
@@ -101,6 +149,7 @@ const AssetTab: FC<{ assetType: SGDBAssetType }> = ({ assetType }) => {
         asset={asset}
         assetType={assetType}
         onAssetChange={async () => await setAsset(asset.id, asset.url)}
+        onApplyAs={async (targetType) => await setAsset(asset.id, asset.url, targetType)}
       />
     ), window);
   };
@@ -155,6 +204,7 @@ const AssetTab: FC<{ assetType: SGDBAssetType }> = ({ assetType }) => {
         onFilterClick={handleFilterClick}
         onLogoPosClick={handleLogoPosClick}
         onOfficialAssetsClick={handleOfficialAssetsClick}
+        onApplyAllOfficialClick={handleApplyAllOfficialClick}
         onSizeChange={(size) => setSizingStyles(size)}
         disabled={tabLoading}
         noFocusRing={searchLoading || tabLoading}

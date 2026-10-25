@@ -29,7 +29,20 @@
     flex-direction: column;
     flex: 1;
   }
+  .apply-as {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5em;
+    margin-top: .5em;
+    > .DialogButton {
+      flex: 1 1 40%;
+      min-width: 0;
+      padding: 4px 8px;
+      font-size: .8em;
+    }
+  }
   .meta {
+    margin-top: .5em;
     text-transform: capitalize;
     opacity: .5;
     font-size: .8em;

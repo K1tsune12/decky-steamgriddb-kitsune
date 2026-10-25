@@ -20,6 +20,14 @@ export interface LibraryImageProps {
   style?: CSSProperties;
 }
 
-const LibraryImage = findModuleExport((e: Export) => e?.toString && e.toString().includes('Either rgSources or app must be specified')) as FC<LibraryImageProps>;
+// Resolved on first render instead of at plugin load, the module scan is expensive during Steam startup
+let SteamLibraryImage: FC<LibraryImageProps> | undefined | null = null;
+
+const LibraryImage: FC<LibraryImageProps> = (props) => {
+  if (SteamLibraryImage === null) {
+    SteamLibraryImage = findModuleExport((e: Export) => e?.toString && e.toString().includes('Either rgSources or app must be specified'));
+  }
+  return SteamLibraryImage ? <SteamLibraryImage {...props} /> : null;
+};
 
 export default LibraryImage;

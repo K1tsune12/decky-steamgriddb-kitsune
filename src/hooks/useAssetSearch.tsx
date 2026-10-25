@@ -24,7 +24,7 @@ import compareFilterWithDefaults from '../utils/compareFilterWithDefaults';
 export type AssetSearchContextType = {
   loading: boolean;
   assets: any[];
-  searchAndSetAssets: (assetType: SGDBAssetType, page: number, filters: any, onSuccess?: () => void) => Promise<void>;
+  searchAndSetAssets: (assetType: SGDBAssetType, page: number, filters: any, onDone?: () => void) => Promise<void>;
   loadMore: (assetType: SGDBAssetType, onSuccess?: (res: any[]) => void) => Promise<void>;
   externalSgdbData: any;
   openFilters: (assetType: SGDBAssetType) => void;
@@ -65,7 +65,7 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
     );
   }, [appId, appOverview.display_name, searchGames, set]);
 
-  const searchAndSetAssets = useMemo(() => debounce(async (assetType, page, filters, onSuccess) => {
+  const searchAndSetAssets = useMemo(() => debounce(async (assetType, page, filters, onDone) => {
     if (appOverview?.BIsModOrShortcut() && !selectedGame) return;
     if (abortCont) abortCont?.abort();
     abortCont = new AbortController();
@@ -83,11 +83,15 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
       setAssets(resp);
       setEndReached(false);
       setPage(page + 1); // set to next page so correct page is requested when loadMore() is used
-      onSuccess?.();
+      onDone?.();
     } catch (err: any) {
       if (err.name === 'AbortError') {
+        // a newer search took over and will finish the loading state
         log('Search Aborted');
-      } else if (err?.status === 404) {
+        return;
+      }
+      setAssets([]);
+      if (err?.status === 404) {
         showGameSelection();
       } else {
         toaster.toast({
@@ -99,6 +103,8 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
           set(`nonsteam_${appId}`, false);
         }
       }
+      // stop the loading spinner on errors too, otherwise the tab stays stuck loading
+      onDone?.();
     }
   }, 500), [appId, appOverview, searchAssets, showGameSelection, selectedGame, set]) as AssetSearchContextType['searchAndSetAssets'];
 
@@ -131,6 +137,7 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
       if (err.name === 'AbortError') {
         log('Load more aborted');
       } else {
+        setMoreLoading(false);
         toaster.toast({
           title: 'SteamGridDB API Error',
           body: err.message,

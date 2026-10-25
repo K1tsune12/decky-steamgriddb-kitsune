@@ -1,6 +1,5 @@
 import {
   afterPatch,
-  fakeRenderComponent,
   findInReactTree,
   findModuleByExport,
   Export,
@@ -13,6 +12,7 @@ import { FC } from 'react';
 
 import t from '../utils/i18n';
 import log from '../utils/log';
+import safeFakeRender from '../utils/safeFakeRender';
 
 // Always add before "Properties..."
 const spliceArtworkItem = (children: any[], appid: number) => {
@@ -135,14 +135,17 @@ const contextMenuPatch = (LibraryContextMenu: any) => {
 };
 
 /**
- * Game context menu component.
+ * Finds the game context menu component.
+ * This scans every Steam module, so call it after startup instead of at plugin load.
  */
-export const LibraryContextMenu = fakeRenderComponent(
-  Object.values(
-    findModuleByExport((e: Export) => e?.toString && e.toString().includes('().LibraryContextMenu'))
-  ).find((sibling) => (
+export const findLibraryContextMenu = () => {
+  const module = findModuleByExport((e: Export) => e?.toString && e.toString().includes('().LibraryContextMenu'));
+  if (!module) return undefined;
+  const Wrapper = Object.values(module).find((sibling) => (
     sibling?.toString().includes('navigator:')
-  )) as FC
-).type;
+  )) as FC<any> | undefined;
+  if (!Wrapper) return undefined;
+  return safeFakeRender((hooks) => Wrapper(hooks))?.type;
+};
 
 export default contextMenuPatch;

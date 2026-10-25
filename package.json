@@ -1,6 +1,6 @@
 {
   "name": "decky-steamgriddb",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "description": "Decky plugin to manage Steam artwork from within gaming mode.",
   "type": "module",
   "scripts": {
@@ -15,7 +15,7 @@
     "prepare": "husky install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": "github:SteamGridDB/decky-steamgriddb",
+  "repository": "github:K1tsune12/decky-steamgriddb-kitsune",
   "keywords": [
     "decky",
     "plugin",
@@ -29,6 +29,10 @@
     "url": "https://jozen.blue/"
   },
   "contributors": [
+    {
+      "name": "K1tsune12",
+      "url": "https://github.com/K1tsune12"
+    },
     {
       "name": "Travis Lane (Tormak)",
       "email": "Tormak9970@gmail.com"
@@ -46,9 +50,9 @@
   ],
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/SteamGridDB/decky-steamgriddb/issues"
+    "url": "https://github.com/K1tsune12/decky-steamgriddb-kitsune/issues"
   },
-  "homepage": "https://github.com/SteamGridDB/decky-steamgriddb#readme",
+  "homepage": "https://github.com/K1tsune12/decky-steamgriddb-kitsune#readme",
   "devDependencies": {
     "@commitlint/cli": "^17.8.1",
     "@commitlint/config-conventional": "^17.8.1",

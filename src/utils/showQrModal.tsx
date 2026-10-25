@@ -1,7 +1,8 @@
 import { showModal, ModalRoot } from '@decky/ui';
-import { QRCodeSVG } from 'qrcode.react';
 
-const showQrModal = (url: string) => {
+const showQrModal = async (url: string) => {
+  // Loaded on demand to keep plugin startup light
+  const { QRCodeSVG } = await import('qrcode.react');
   showModal(
     <ModalRoot>
       <QRCodeSVG

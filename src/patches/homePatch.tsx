@@ -1,19 +1,10 @@
-import {
-  afterPatch,
-  findInReactTree,
-  findSP,
-  replacePatch,
-  callOriginal,
-  wrapReactType,
-} from '@decky/ui';
+import { findInReactTree, findSP } from '@decky/ui';
 import { RoutePatch, routerHook } from '@decky/api';
 
 import { libraryAssetImageClasses, appportraitClasses, homeCarouselClasses, miscInfoClasses } from '../static-classes';
-// import LibraryImage from '../components/asset/LibraryImage';
-// import { ASSET_TYPE } from '../constants';
 import { addStyle, removeStyle } from '../utils/styleInjector';
 
-import { rerenderAfterPatchUpdate } from './patchUtils';
+import { createTypePatcher, rerenderAfterPatchUpdate } from './patchUtils';
 
 let patch: RoutePatch | undefined;
 
@@ -28,6 +19,18 @@ const calculateDefaultCapsuleWidth = (newHeight: number) => {
   const originalHeight = 262.5;
   const ratio = originalWidth / originalHeight;
   return newHeight * ratio;
+};
+
+/**
+ * Returns the patched version of `original`, creating it only once per original function.
+ * Handing the carousel a new function on every render makes it re-layout and jump back to the focused item.
+ */
+const getCachedPatch = <T extends (...args: any[]) => any>(cache: WeakMap<T, T>, original: T, createPatch: (original: T) => T): T => {
+  if (cache.has(original)) return cache.get(original) as T;
+  const patched = createPatch(original);
+  cache.set(original, patched);
+  cache.set(patched, patched);
+  return patched;
 };
 
 export const addHomePatch = (mounting = false, square = false, matchFeatured = false, carouselLogo = false) => {
@@ -73,158 +76,111 @@ export const addHomePatch = (mounting = false, square = false, matchFeatured = f
     removeStyle('sgdb-carousel-logo');
   }
 
-  patch = routerHook.addPatch('/library/home', (props) => {
-    afterPatch(props.children, 'type', (_: Record<string, unknown>[], ret?: any) => {
-      let cache2: any = null;
-      wrapReactType(ret);
-      afterPatch(ret.type, 'type', (_: Record<string, unknown>[], ret2?: any) => {
-        if (cache2) {
-          ret2 = cache2;
-          return ret2;
-        }
+  const patchType = createTypePatcher();
+  const rendererCache = new WeakMap<(...args: any[]) => any, (...args: any[]) => any>();
+  const columnWidthCache = new WeakMap<(...args: any[]) => any, (...args: any[]) => any>();
 
-        let cache3: any = null;
-        const recents = findInReactTree(ret2, (x) => x?.props && ('autoFocus' in x.props) && ('showBackground' in x.props));
+  // Shared with the cached carousel callbacks, updated on every carousel render
+  const carousel = {
+    itemHeight: 0,
+    hasSeparator: false,
+    siblingWidth: 0,
+  };
 
-        wrapReactType(recents);
-        afterPatch(recents.type, 'type', (_: Record<string, unknown>[], ret3?: any) => {
-          cache2 = ret2;
+  const patchCarouselProps = (carouselProps: any) => {
+    carousel.itemHeight = carouselProps.nItemHeight;
+    // detected again by the item renderer, the separator isn't always there
+    carousel.hasSeparator = false;
 
-          if (cache3) {
-            ret3 = cache3;
-            return ret3;
-          }
+    /*
+      Instead of hacking around with CSS to make the image square, make the featured
+      item render the portrait component by changing the `bFeatured` flag to false.
 
-          const p = findInReactTree(ret3, (x) => x?.props?.games && x?.props.onItemFocus);
-          afterPatch(p, 'type', (_: Record<string, unknown>[], ret4?: any) => {
-            // const cache6: any[] = []; // cache carousel items
-            cache3 = ret3;
+      To get the first item in recents, Valve checks if the index is 0:
+        `bFeatured: 0 === t,`
+      Can't get the index of the element from `fnItemRenderer`, so we just just check if the current
+      position of the item (`nLeft`) in the carousel is leftmost (0) or out of the screen (negative float)
+    */
+    carouselProps.fnItemRenderer = getCachedPatch(rendererCache, carouselProps.fnItemRenderer, (original) => (...args: any[]) => {
+      const item = original(...args);
+      if (!item?.props) return item;
 
-            wrapReactType(ret4);
-            afterPatch(ret4.type, 'type', (_: Record<string, unknown>[], ret5?: any) => {
-              const carouselProps = findInReactTree(ret5, (x) => x?.nItemHeight && x?.fnItemRenderer && x?.fnGetColumnWidth);
-              const itemHeight = carouselProps.nItemHeight;
-              let hasSeparator = false;
-              /*
-                Instead of hacking around with CSS to make the image square, make the featured
-                item render the portrait component by changing the `bFeatured` flag to false.
+      if (item.props.nLeft <= 0 && ('bFeatured' in item.props)) {
+        item.props.bFeatured = !matchFeatured;
+      }
 
-                To get the first item in recents, Valve checks if the index is 0:
-                  `bFeatured: 0 === t,`
-                Can't get the index of the element from `fnItemRenderer`, so we just just check if the current
-                position of the item (`nLeft`) in the carousel is leftmost (0) or out of the screen (negative float)
-              */
-              afterPatch(carouselProps, 'fnItemRenderer', (_: Record<string, unknown>[], ret6?: any) => {
-                if (ret6.props.nLeft <= 0 && ('bFeatured' in ret6.props)) {
-                  ret6.props.bFeatured = !matchFeatured;
-                }
-
-                // find the separator item if it's there
-                if (
-                  !('bFeatured' in ret6.props) &&
-                  ret6.props?.focusable === false &&
-                  ret6.props?.className?.includes(homeCarouselClasses.FeaturedSeparator)
-                ) {
-                  hasSeparator = true;
-                }
-
-                /*
-                  Experimental logo in carousel
-                */
-                /* if (carouselLogo && ret6.type.type && ret6.props?.appid) {
-                  if (cache6[ret6.props?.appid]) {
-                    ret6 = cache6[ret6.props?.appid];
-                    return ret6;
-                  }
-                  wrapReactType(ret6);
-                  afterPatch(ret6.type, 'type', (_: Record<string, unknown>[], ret7?: any) => {
-                    const c1 = findInReactTree(ret7, (x) => x?.props && x.props.className && x.props?.style?.width && x.props?.style?.height);
-                    const c2 = findInReactTree(balls, (x) => x?.props && ('bShowAsHovered' in x.props) && ('nCarouselWidth' in x.props));
-                    const app = c2.props.app;
-                    // outside carousel?
-                    c1.props.children.splice(1, 0, (
-                      <LibraryImage
-                        app={app}
-                        className="sgdb-carousel-logo-container"
-                        imageClassName="sgdb-carousel-logo-img"
-                        eAssetType={ASSET_TYPE.logo}
-                        allowCustomization={false}
-                        backgroundType="transparent"
-                        neverShowTitle={false}
-                        bShortDisplay
-                      />
-                    ));
-                    // replace the text inside the marquee
-                    wrapReactType(c2);
-                    afterPatch(c2.type, 'type', (_: Record<string, unknown>[], ret8?: any) => {
-                      if (ret8) {
-                        // console.log(ret8);
-                        ret8.props.children.props.children[0].props.message = (
-                          <LibraryImage
-                            app={app}
-                            className="sgdb-carousel-logo-container"
-                            imageClassName="sgdb-carousel-logo-img"
-                            eAssetType={ASSET_TYPE.logo}
-                            allowCustomization={false}
-                            backgroundType="transparent"
-                            neverShowTitle={false}
-                            bShortDisplay
-                          />
-                        );
-                      }
-                      return ret8;
-                    });
-                    return ret7;
-                  });
-                  cache6[ret6.props?.appid] = ret6;
-                }
-                */
-                return ret6;
-              });
-
-              /* Unminified version of `fnGetColumnWidth`:
-                if (index === 0 && showFeaturedItem) {
-                  return (690 / 215) * nItemWidth;
-                } else if (games[index] === 0) { // not so sure about this
-                  return 10;
-                } else {
-                  return nItemWidth;
-                }
-              */
-              let siblingWidth = 0;
-              afterPatch(carouselProps, 'fnGetColumnWidth', ([index], colWidth: number) => {
-                if (hasSeparator && index === 2) {
-                  siblingWidth = colWidth;
-                } else if (!hasSeparator && index === 1) {
-                  siblingWidth = colWidth;
-                }
-                return colWidth;
-              });
-              replacePatch(carouselProps, 'fnGetColumnWidth', ([index]) => {
-                // Leave horizontal grid as wide
-                if (index === 0 && !matchFeatured) return callOriginal;
-
-                /* this is how valve does it -.-
-                  height: a - parseInt(or().LabelHeight)
-                */
-                const capsuleHeight = itemHeight - parseInt(homeCarouselClasses.LabelHeight);
-                // the separator item should not be changed
-                if (index === 1 && hasSeparator) {
-                  return callOriginal;
-                }
-                if (square) return capsuleHeight;
-                return siblingWidth ? siblingWidth : calculateDefaultCapsuleWidth(capsuleHeight);
-              });
-              return ret5;
-            });
-            return ret4;
-          });
-          return ret3;
-        });
-        return ret2;
-      });
-      return ret;
+      // find the separator item if it's there
+      if (
+        !('bFeatured' in item.props) &&
+        item.props.focusable === false &&
+        item.props.className?.includes(homeCarouselClasses.FeaturedSeparator)
+      ) {
+        carousel.hasSeparator = true;
+      }
+      return item;
     });
+
+    /* Unminified version of `fnGetColumnWidth`:
+      if (index === 0 && showFeaturedItem) {
+        return (690 / 215) * nItemWidth;
+      } else if (games[index] === 0) { // not so sure about this
+        return 10;
+      } else {
+        return nItemWidth;
+      }
+    */
+    carouselProps.fnGetColumnWidth = getCachedPatch(columnWidthCache, carouselProps.fnGetColumnWidth, (original) => (index: number, ...rest: any[]) => {
+      const colWidth = original(index, ...rest);
+
+      // width of a regular capsule, used for the featured one when matching it
+      if ((carousel.hasSeparator && index === 2) || (!carousel.hasSeparator && index === 1)) {
+        carousel.siblingWidth = colWidth;
+      }
+
+      // Leave horizontal grid as wide
+      if (index === 0 && !matchFeatured) return colWidth;
+      // the separator item should not be changed
+      if (index === 1 && carousel.hasSeparator) return colWidth;
+
+      /* this is how valve does it -.-
+        height: a - parseInt(or().LabelHeight)
+      */
+      const capsuleHeight = carousel.itemHeight - parseInt(homeCarouselClasses.LabelHeight);
+      if (square) return capsuleHeight;
+      return carousel.siblingWidth || calculateDefaultCapsuleWidth(capsuleHeight);
+    });
+  };
+
+  const patchCarousel = (_: any[], ret5?: any) => {
+    const carouselProps = findInReactTree(ret5, (x) => x?.nItemHeight && x?.fnItemRenderer && x?.fnGetColumnWidth);
+    if (carouselProps) patchCarouselProps(carouselProps);
+    return ret5;
+  };
+
+  const patchRecentsList = (_: any[], ret4?: any) => {
+    patchType(ret4, patchCarousel);
+    return ret4;
+  };
+
+  const patchRecents = (_: any[], ret3?: any) => {
+    const recentsList = findInReactTree(ret3, (x) => x?.props?.games && x?.props.onItemFocus);
+    patchType(recentsList, patchRecentsList);
+    return ret3;
+  };
+
+  const patchHomeContent = (_: any[], ret2?: any) => {
+    const recents = findInReactTree(ret2, (x) => x?.props && ('autoFocus' in x.props) && ('showBackground' in x.props));
+    patchType(recents, patchRecents);
+    return ret2;
+  };
+
+  const patchHome = (_: any[], ret?: any) => {
+    patchType(ret, patchHomeContent);
+    return ret;
+  };
+
+  patch = routerHook.addPatch('/library/home', (props) => {
+    patchType(props.children, patchHome);
     return props;
   });
 

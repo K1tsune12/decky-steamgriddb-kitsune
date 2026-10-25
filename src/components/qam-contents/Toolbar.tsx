@@ -59,6 +59,7 @@ export interface Toolbar {
   onSizeChange: (size: any) => void;
   onFilterClick: () => void;
   onOfficialAssetsClick: () => void;
+  onApplyAllOfficialClick: () => void;
   onLogoPosClick: () => void;
   disabled: boolean;
   noFocusRing?: boolean;
@@ -83,6 +84,7 @@ const Toolbar = forwardRef(({
   onSizeChange,
   onFilterClick,
   onOfficialAssetsClick,
+  onApplyAllOfficialClick,
   onLogoPosClick,
   disabled = false,
   noFocusRing,
@@ -153,6 +155,15 @@ const Toolbar = forwardRef(({
             onClick={onOfficialAssetsClick}
           >
             {t('ACTION_OPEN_OFFICIAL_ASSETS', 'Official {assetType}').replace('{assetType}', SGDB_ASSET_TYPE_READABLE[assetType])}
+          </DialogButton>
+        )}
+        {externalSgdbData?.steam?.[0]?.metadata && (
+          <DialogButton
+            noFocusRing
+            onOKActionDescription={t('ACTION_APPLY_ALL_OFFICIAL', 'Apply All Official')}
+            onClick={onApplyAllOfficialClick}
+          >
+            {t('ACTION_APPLY_ALL_OFFICIAL', 'Apply All Official')}
           </DialogButton>
         )}
         {['logo', 'hero'].includes(assetType) && (
