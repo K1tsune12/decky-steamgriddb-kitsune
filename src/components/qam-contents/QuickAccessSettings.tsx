@@ -11,6 +11,7 @@ import {
   DialogBodyText,
   ToggleField,
   SliderField,
+  ButtonItem,
 } from '@decky/ui';
 import { FileSelectionType, openFilePicker } from '@decky/api';
 import { useState, useEffect, VFC, useCallback } from 'react';
@@ -25,6 +26,7 @@ import {
 } from 'react-icons/si';
 
 import BoopIcon from '../Icons/BoopIcon';
+import Chevron from '../Chevron';
 import TwitterIcon from '../Icons/TwitterIcon';
 import t, { getCredits } from '../../utils/i18n';
 import TabSorter from '../TabSorter';
@@ -69,6 +71,7 @@ const QuickAccessSettings: VFC = () => {
   const [motdToggle, setMotdToggle] = useState<boolean>(false);
   const [capsuleGlowAmount, setCapsuleGlowAmount] = useState(100);
   const [debugAppid] = useState('70');
+  const [showMoreLinks, setShowMoreLinks] = useState(false);
 
   const handleMotdToggle = useCallback(async (val: boolean) => {
     set('motd_hidden_global', val, true);
@@ -292,61 +295,74 @@ const QuickAccessSettings: VFC = () => {
           </div>
         </PanelSection>
       )}
-      <PanelSection title={t('LABEL_MORE_SGDB_TITLE', 'More SteamGridDB Stuff')}>
-        <PanelSocialButton
-          icon={<SiDiscord fill="#5865F2" />}
-          url="https://discord.gg/bnSVJrz"
-        >
-          {t('ACTION_SGDB_DISCORD', 'Join the Discord')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiGithub />}
-          url="https://github.com/SteamGridDB/"
-        >
-          {t('ACTION_SGDB_GITHUB', 'Open Source Projects')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiPatreon fill="#FF424D" />}
-          url="https://www.patreon.com/steamgriddb"
-        >
-          {t('ACTION_SGDB_DONATE', 'Support us on Patreon')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiKofi fill="#FF5E5B" />}
-          url="https://ko-fi.com/steamgriddb"
-        >
-          Ko-fi
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiCrowdin fill="#fff" />} // actual branding is #2E3340 but it's too dark
-          url="https://crowdin.com/project/decky-steamgriddb"
-        >
-          {t('ACTION_SGDB_TRANSLATE', 'Help Translate')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<BoopIcon fill="#4e9ac6" />}
-          url="https://www.steamgriddb.com/boop"
-        >
-          {t('ACTION_SGDB_BOOP', 'Check out SGDBoop')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiBluesky fill="#0285FF" />}
-          url="https://bsky.app/profile/steamgriddb.com"
-        >
-          Bluesky
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiMastodon fill="#6364FF" />}
-          url="https://mastodon.gamedev.place/@SteamGridDB"
-        >
-          Mastodon
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<TwitterIcon fill="#1DA1F2" />}
-          url="https://twitter.com/SteamGridDB"
-        >
-          lol
-        </PanelSocialButton>
+      {/* Collapsed by default so the external links do not take over the panel. */}
+      <PanelSection>
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => setShowMoreLinks((v) => !v)}>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5em' }}>
+              {t('LABEL_MORE_SGDB_TITLE', 'More SteamGridDB Stuff')}
+              <Chevron direction={showMoreLinks ? 'up' : 'down'} style={{ height: '1em', flex: '0 0 1em' }} />
+            </span>
+          </ButtonItem>
+        </PanelSectionRow>
+        {showMoreLinks && (
+          <>
+            <PanelSocialButton
+              icon={<SiDiscord fill="#5865F2" />}
+              url="https://discord.gg/bnSVJrz"
+            >
+              {t('ACTION_SGDB_DISCORD', 'Join the Discord')}
+            </PanelSocialButton>
+            <PanelSocialButton
+              icon={<SiGithub />}
+              url="https://github.com/SteamGridDB/"
+            >
+              {t('ACTION_SGDB_GITHUB', 'Open Source Projects')}
+            </PanelSocialButton>
+            <PanelSocialButton
+              icon={<SiPatreon fill="#FF424D" />}
+              url="https://www.patreon.com/steamgriddb"
+            >
+              {t('ACTION_SGDB_DONATE', 'Support us on Patreon')}
+            </PanelSocialButton>
+            <PanelSocialButton
+              icon={<SiKofi fill="#FF5E5B" />}
+              url="https://ko-fi.com/steamgriddb"
+            >
+              Ko-fi
+            </PanelSocialButton>
+            <PanelSocialButton
+              icon={<SiCrowdin fill="#fff" />} // actual branding is #2E3340 but it's too dark
+              url="https://crowdin.com/project/decky-steamgriddb"
+            >
+              {t('ACTION_SGDB_TRANSLATE', 'Help Translate')}
+            </PanelSocialButton>
+            <PanelSocialButton
+              icon={<BoopIcon fill="#4e9ac6" />}
+              url="https://www.steamgriddb.com/boop"
+            >
+              {t('ACTION_SGDB_BOOP', 'Check out SGDBoop')}
+            </PanelSocialButton>
+            <PanelSocialButton
+              icon={<SiBluesky fill="#0285FF" />}
+              url="https://bsky.app/profile/steamgriddb.com"
+            >
+              Bluesky
+            </PanelSocialButton>
+            <PanelSocialButton
+              icon={<SiMastodon fill="#6364FF" />}
+              url="https://mastodon.gamedev.place/@SteamGridDB"
+            >
+              Mastodon
+            </PanelSocialButton>
+            <PanelSocialButton
+              icon={<TwitterIcon fill="#1DA1F2" />}
+              url="https://twitter.com/SteamGridDB"
+            >
+              lol
+            </PanelSocialButton>
+          </>
+        )}
       </PanelSection>
     </>
   );
