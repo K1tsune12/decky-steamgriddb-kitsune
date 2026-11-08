@@ -75,5 +75,13 @@
   "TITLE_APPLY_ALL_OFFICIAL": "Aplicar todas as artes oficiais?",
   "MSG_APPLY_ALL_OFFICIAL_DESC": "Isto substitui {assetTypes} deste jogo pelas artes oficiais da Steam.",
   "MSG_APPLY_ALL_OFFICIAL_SUCCESS": "As artes oficiais foram aplicadas com sucesso!",
-  "ACTION_ASSET_APPLY_AS": "Usar como {assetType}"
+  "ACTION_ASSET_APPLY_AS": "Usar como {assetType}",
+  "LABEL_UNIFORM_RECENT": "Cápsula de recentes uniforme",
+  "LABEL_UNIFORM_RECENT_DESC": "Faz o jogo jogado mais recentemente na tela inicial combinar com as outras cápsulas.",
+  "LABEL_SETTINGS_DISABLE_MOTD": "Desativar avisos",
+  "LABEL_SETTINGS_DISABLE_MOTD_DESC": "Os avisos são usados raramente, para mostrar informações importantes ou eventos da comunidade.",
+  "ACTION_CHANGE_POS_LOGO_ANCHOR_POINT": "Mudar ponto de ancoragem",
+  "TITLE_MOTD_HIDE": "Ocultar aviso?",
+  "LABEL_MOTD_THIS": "Este aviso",
+  "LABEL_MOTD_ALL": "Todos os avisos"
 }
