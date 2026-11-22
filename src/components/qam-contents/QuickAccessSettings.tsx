@@ -38,6 +38,7 @@ import { DIMENSIONS } from '../../constants';
 import { appgridClasses } from '../../static-classes';
 
 import GuideVideoField from './GuideVideoField';
+import { UpdateCheckButton } from './UpdateCheck';
 import PanelSocialButton from './PanelSocialButton';
 
 const tabSettingsDesc = t('MSG_ASSET_TAB_SETTINGS_DESC', 'Reorder or hide unused tabs, and set the default tab that opens when using "{ACTION_CHANGE_ARTWORK}"').replace('{ACTION_CHANGE_ARTWORK}', t('ACTION_CHANGE_ARTWORK', 'Change Artwork...'));
@@ -297,6 +298,11 @@ const QuickAccessSettings: VFC = () => {
       )}
       {/* Collapsed by default so the external links do not take over the panel. */}
       <PanelSection>
+        <UpdateCheckButton
+          repo="K1tsune12/decky-steamgriddb-kitsune"
+          pluginName="SteamGridDB"
+          lang={/^(pt|brazilian|portuguese)/i.test(window.LocalizationManager?.m_rgLocalesToUse?.[0] ?? '') ? 'pt-BR' : 'en'}
+        />
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={() => setShowMoreLinks((v) => !v)}>
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5em' }}>
