@@ -21,6 +21,8 @@
   "LABEL_UNIFORM_RECENT_DESC": "Make the most recently played game on the home screen match the rest of the capsules.",
   "LABEL_CAPSULE_GLOW": "Capsule Glow",
   "LABEL_CAPSULE_GLOW_DESC": "Adjust capsule glow intensity in the library.",
+  "LABEL_OPTIMIZE_ANIMATED": "Optimize Animated Artwork",
+  "LABEL_OPTIMIZE_ANIMATED_DESC": "Shrink animated artwork to the size Steam shows it when applying it. Keeps the animation and its speed, and avoids flickering on the home screen.",
   "LABEL_CAPSULE_GLOW_OFF": "None",
   "LABEL_SETTINGS_ASSET_TABS": "Asset Tab Settings",
   "LABEL_SETTINGS_DISABLE_MOTD": "Disable Announcements",

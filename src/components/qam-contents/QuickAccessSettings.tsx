@@ -70,6 +70,7 @@ const QuickAccessSettings: VFC = () => {
   const [squares, setSquares] = useState<boolean>(false);
   const [uniformFeatured, setUniformFeatured] = useState<boolean>(false);
   const [motdToggle, setMotdToggle] = useState<boolean>(false);
+  const [optimizeAnimated, setOptimizeAnimated] = useState<boolean>(true);
   const [capsuleGlowAmount, setCapsuleGlowAmount] = useState(100);
   const [debugAppid] = useState('70');
   const [showMoreLinks, setShowMoreLinks] = useState(false);
@@ -77,6 +78,11 @@ const QuickAccessSettings: VFC = () => {
   const handleMotdToggle = useCallback(async (val: boolean) => {
     set('motd_hidden_global', val, true);
     setMotdToggle(val);
+  }, [set]);
+
+  const handleOptimizeAnimatedToggle = useCallback(async (val: boolean) => {
+    set('optimize_animated', val, true);
+    setOptimizeAnimated(val);
   }, [set]);
 
   const handleSquareToggle = useCallback(async (checked: boolean) => {
@@ -119,6 +125,7 @@ const QuickAccessSettings: VFC = () => {
       setUniformFeatured(await get('uniform_featured', false));
       setCapsuleGlowAmount(await get('capsule_glow_amount', 100));
       setMotdToggle(await get('motd_hidden_global', false));
+      setOptimizeAnimated(await get('optimize_animated', true));
     })();
   }, [get]);
 
@@ -247,6 +254,14 @@ const QuickAccessSettings: VFC = () => {
             />
           </PanelSectionRow>
         )}
+        <PanelSectionRow>
+          <ToggleField
+            label={t('LABEL_OPTIMIZE_ANIMATED', 'Optimize Animated Artwork')}
+            description={t('LABEL_OPTIMIZE_ANIMATED_DESC', 'Shrink animated artwork to the size Steam shows it when applying it. Keeps the animation and its speed, and avoids flickering on the home screen.')}
+            checked={optimizeAnimated}
+            onChange={handleOptimizeAnimatedToggle}
+          />
+        </PanelSectionRow>
         <PanelSectionRow>
           <Field childrenLayout="below" description={tabSettingsDesc}>
             <DialogButton

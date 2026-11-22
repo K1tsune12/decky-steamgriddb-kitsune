@@ -21,6 +21,8 @@
   "LABEL_UNIFORM_RECENT_DESC": "Faz com que o jogo mais recentemente jogado no ecrã inicial tenha uma aparência igual ao resto das cápsulas.",
   "LABEL_CAPSULE_GLOW": "Brilho da cápsula",
   "LABEL_CAPSULE_GLOW_DESC": "Ajusta a intensidade do brilho na biblioteca.",
+  "LABEL_OPTIMIZE_ANIMATED": "Otimizar artes animadas",
+  "LABEL_OPTIMIZE_ANIMATED_DESC": "Reduz as artes animadas para o tamanho em que o Steam as mostra, ao aplicar. Mantém a animação e a velocidade, e evita que o ecrã inicial pisque.",
   "LABEL_CAPSULE_GLOW_OFF": "Nenhum",
   "LABEL_SETTINGS_ASSET_TABS": "Definições dos separadores de imagens",
   "LABEL_SETTINGS_DISABLE_MOTD": "Desativar anúncios",

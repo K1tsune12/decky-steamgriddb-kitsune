@@ -19,6 +19,8 @@
   "LABEL_SQUARE_CAPSULES_DESC": "Use cápsulas quadradas ao invés de cápsulas verticais (padrão). Os filtros quadrados serão selecionados automaticamente.",
   "LABEL_CAPSULE_GLOW": "Cápsula Brilhante",
   "LABEL_CAPSULE_GLOW_DESC": "Ajustar a intensidade do brilho da cápsula na biblioteca.",
+  "LABEL_OPTIMIZE_ANIMATED": "Otimizar artes animadas",
+  "LABEL_OPTIMIZE_ANIMATED_DESC": "Reduz as artes animadas para o tamanho em que o Steam as mostra, ao aplicar. Mantém a animação e a velocidade, e evita que a tela inicial pisque.",
   "LABEL_CAPSULE_GLOW_OFF": "Nenhum",
   "LABEL_SETTINGS_ASSET_TABS": "Configurações de Abas de Conteúdo",
   "LABEL_TRANSLATION_CREDIT_TITLE": "Tradução PT-BR",

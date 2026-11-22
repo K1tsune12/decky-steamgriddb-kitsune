@@ -18,6 +18,7 @@ import getAppDetails from '../utils/getAppDetails';
 import showRestartConfirm from '../utils/showRestartConfirm';
 import getCurrentSteamUserId from '../utils/getCurrentSteamUserId';
 import getCustomLogoPosition from '../utils/getCustomLogoPosition';
+import optimizeAnimated from '../utils/optimizeAnimated';
 
 /*
   special key only for use with this decky plugin
@@ -138,6 +139,11 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const changeAsset: SGDBContextType['changeAsset'] = useCallback(async (data, assetType) => {
     assetType = getAmbiguousAssetType(assetType);
     try {
+      // Shrink big animated art to the size Steam shows it: full-size animations can make the
+      // home screen flicker on weaker GPUs. Keeps the original if this fails or is turned off.
+      if (await call<[key: string, fallback: boolean], boolean>('get_setting', 'optimize_animated', true)) {
+        data = (await optimizeAnimated(data, assetType)) ?? data;
+      }
       await clearAsset(assetType);
       await SteamClient.Apps.SetCustomArtworkForApp(appId, data, 'png', assetType);
 

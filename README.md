@@ -27,6 +27,7 @@
 ### 🎁 New features
 - 🏆 **Apply All Official:** set every official Steam artwork (capsule, wide capsule, hero, logo and icon) in one go. Great for non-Steam games.
 - 🔀 **Use as another type:** open an artwork's details to use it as a capsule, wide capsule, hero or logo. Handy when a game only has one kind of artwork.
+- 🎞️ **Optimize Animated Artwork** (on by default): animated capsules and logos are shrunk to the size Steam shows them when you apply them, keeping every frame and its timing. Full size animations can make the home screen flicker on some devices (seen on Bazzite), and they cost GPU and battery everywhere.
 
 ## 📦 Installation
 1. Install [Decky Loader](https://wiki.deckbrew.xyz/en/user-guide/install).
